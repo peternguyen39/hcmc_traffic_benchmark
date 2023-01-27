@@ -88,6 +88,7 @@ def load_neighborhood_data(traffic_data,neighbors):
     return neighborhood_data
 
 def interpolate_traffic_data(traffic_data,interval):
+    #TODO: VERIFY CORRECTNESS
     """
     Apply nearest neighbor interpolation to traffic data at a given interval
     Interpolated_data format:
@@ -96,6 +97,8 @@ def interpolate_traffic_data(traffic_data,interval):
     """
     interpolated_data = {}
     max_hour = 23
+    min_hour = 7
+    n_samples = int(60*(max_hour-min_hour)/interval)
     for date in traffic_data:
         date_data = traffic_data[date]
         interpolated_data[date] = {}
@@ -103,22 +106,30 @@ def interpolate_traffic_data(traffic_data,interval):
         for sensor_id in date_data:
             sensor_data = date_data[sensor_id]
             interpolated_data[date][sensor_id] = {}
+            timestamps, file_names = load_timestamps(sensor_data,min_hour)
             # Iterate through each sample file
-            for sample_file_name in sensor_data:
-                sample_file_data = sensor_data[sample_file_name]
-                count = sample_file_data['count']
-                timestamp = sample_file_data['timestamp']
-                hour = timestamp[0]
-                minute = timestamp[1]
-                # Interpolate data
-                for i in range(0,60,interval):
-                    if hour+(minute+i)//60 > max_hour:
-                        continue
-                    interpolated_data[date][sensor_id][f'{hour+(minute+i)//60}:{(minute+i)%60}'] = count
-    return interpolated_data
+            for i in range(n_samples):
+                interpolated_data[date][sensor_id][i] = {}
+                # Interpolate data using nearest neighboring timestamp
+                # Tried using linear interpolation (np.interp) but results in floating point values
+                # interpolated_data[date][sensor_id][i]['count'] = np.interp(i,timestamps,sensor_data[file_names]['count'])
+                interpolated_data[date][sensor_id][i]['count'] = sensor_data[file_names[np.argmin(np.abs(timestamps-i))]]['count']
+                interpolated_data[date][sensor_id][i]['timestamp'] = [min_hour+i//60,i%60]
+    return interpolated_data, n_samples
 
 
-def load_training_data(traffic_data,dates):
+def load_timestamps(sensor_data,min_hour):
+    timestamps=[]
+    names = []
+    for name in sensor_data:
+        timestamp = sensor_data[name]['timestamp']
+        value = (timestamp[0]-min_hour)*60+timestamp[1]
+        timestamps.append(value)
+        names.append(name)
+    return np.array(timestamps), np.array(names)
+
+
+def load_training_data(dates,neighborhood_data,neighborhood,neighbors,history,horizon,n_samples,use_time_of_day=True,normalize_max=False):
     #Training data format:
     # {date:{sensor_id:{'count':count,'timestamp':[hour,minute]}}}
     X = []
