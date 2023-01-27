@@ -25,8 +25,11 @@ def main():
     training_data = load_traffic_data(traffic_data_path, dates=training_dates)
     testing_data = load_traffic_data(traffic_data_path, dates=testing_dates)
 
-    testing_neighborhood_dict = load_K_hop_neighborhood(adj_matrix, 0, sensor_dict, 1)
-    print(testing_neighborhood_dict)
+    testing_neighborhood_dict,neighbors = load_K_hop_neighborhood(adj_matrix, 0, sensor_dict, 2)
+    testing_neighborhood_data = load_neighborhood_data(testing_data, neighbors)
+    interpolated_data = interpolate_traffic_data(testing_neighborhood_data, 5)
+    print(interpolated_data)
+    # print(testing_neighborhood_dict)
     
 
     
@@ -53,16 +56,67 @@ def load_traffic_data(path,dates='all'):
         return {date:traffic_data[date] for date in dates}
 
 #Load K-hop neighborhood of a sensor
+#Return both the neighborhood dictionary and the list of neighbors
 def load_K_hop_neighborhood(adj_matrix,sensor_id,sensor_dict,K):
     neighborhood_dict = {0:[]}
     neighborhood_dict[0].append(sensor_id)
     neighbors = [sensor_id]
+    neighbor_list = [sensor_id]
     for k in range(1,K+1):
         neighborhood_dict[k] = []
         for neighbor in neighbors:
-            neighborhood_dict[k].extend([sensor_dict[str(i)] for i in np.where(adj_matrix[neighbor])[0]])
+            neighborhood_dict[k].extend(i for i in np.where(adj_matrix[neighbor])[0])
+            neighbor_list.extend(i for i in np.where(adj_matrix[neighbor])[0])
         neighbors = neighborhood_dict[k]
-    return neighborhood_dict
+    for i in neighborhood_dict:
+        neighborhood_dict[i] = list(dict.fromkeys(neighborhood_dict[i]))
+        if i!=0:
+            for j in range(i):
+                neighborhood_dict[i] = list(set(neighborhood_dict[i])-set(neighborhood_dict[j]))
+    return neighborhood_dict, list(dict.fromkeys(neighbor_list))
+
+def load_neighborhood_data(traffic_data,neighbors):
+    neighborhood_data = {}
+    for date in traffic_data:
+        neighborhood_data[date] = {}
+        try:
+            for sensor_id in neighbors:
+                neighborhood_data[date][str(sensor_id)] = traffic_data[date][str(sensor_id)]
+        except:
+            print('Sensor {} not found in traffic data. Available keys:{}'.format(sensor_id,traffic_data[date].keys()))
+            print("Key data type:{}, dict key data type:{}".format(type(sensor_id),type(list(traffic_data[date].keys())[0])))
+    return neighborhood_data
+
+def interpolate_traffic_data(traffic_data,interval):
+    """
+    Apply nearest neighbor interpolation to traffic data at a given interval
+    Interpolated_data format:
+    # {date:{sensor_id:{'count':count,'timestamp':[hour,minute]}}}
+    {date:{sensor_id:{sample_number}={count':count,'timestamp':[hour,minute]}}}}
+    """
+    interpolated_data = {}
+    max_hour = 23
+    for date in traffic_data:
+        date_data = traffic_data[date]
+        interpolated_data[date] = {}
+        # Iterate through each sensor
+        for sensor_id in date_data:
+            sensor_data = date_data[sensor_id]
+            interpolated_data[date][sensor_id] = {}
+            # Iterate through each sample file
+            for sample_file_name in sensor_data:
+                sample_file_data = sensor_data[sample_file_name]
+                count = sample_file_data['count']
+                timestamp = sample_file_data['timestamp']
+                hour = timestamp[0]
+                minute = timestamp[1]
+                # Interpolate data
+                for i in range(0,60,interval):
+                    if hour+(minute+i)//60 > max_hour:
+                        continue
+                    interpolated_data[date][sensor_id][f'{hour+(minute+i)//60}:{(minute+i)%60}'] = count
+    return interpolated_data
+
 
 def load_training_data(traffic_data,dates):
     #Training data format:
