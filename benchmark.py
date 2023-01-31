@@ -135,6 +135,21 @@ def load_timestamps(sensor_data,min_hour):
     return np.array(timestamps), np.array(names)
 
 
+def build_feature_vector(idx,n_samples, date, neighborhood_data,neighborhood,history,use_time_of_day,max_dict):
+    features = []
+    if use_time_of_day:
+        features.append([idx])
+    if isinstance(history,int):
+        history = [history]
+    for h in history:
+        for k in neighborhood:
+            for sensor in neighborhood[k]:
+                if len(max_dict)>0:
+                    features.append([neighborhood_data[date][str(sensor-h)][idx]['count']/max_dict[str(sensor)]])
+                else:
+                    features.append([neighborhood_data[date][str(sensor-h)][idx]['count']])
+
+
 def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,neighbors:list,history:int,horizon:int,n_samples:int,use_time_of_day:bool=True,normalize_max:bool=False):
     """
     :param list[str] dates: list of dates used to load training data
@@ -174,8 +189,13 @@ def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,
                     print("KeyError:{}".format(e))
                     print("Corresponding camera name:{}".format(sensor_dict[str(sensor)][1]))
                     print("Corresponding camera coordinates:{}".format(sensor_dict[str(sensor)][0]))
-    
     print(max_dict)
+    for date in dates:
+        for sample in valid_sample_indices:
+            X.append
+
+
+    
 
 
 if __name__ == "__main__":
