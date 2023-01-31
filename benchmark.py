@@ -3,8 +3,10 @@ import argparse
 import json
 import os
 
+sensor_dict = None
 
 def main():
+    global sensor_dict
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model', required=True,
                         type=str, help='string to identify model')
@@ -25,10 +27,14 @@ def main():
     training_data = load_traffic_data(traffic_data_path, dates=training_dates)
     testing_data = load_traffic_data(traffic_data_path, dates=testing_dates)
 
-    testing_neighborhood_dict,neighbors = load_K_hop_neighborhood(adj_matrix, 0, sensor_dict, 2)
-    testing_neighborhood_data = load_neighborhood_data(testing_data, neighbors)
-    interpolated_data = interpolate_traffic_data(testing_neighborhood_data, 5)
-    print(interpolated_data)
+    training_neighborhood_dict,neighbors = load_K_hop_neighborhood(adj_matrix, 0, sensor_dict, 2)
+    training_neighborhood_data = load_neighborhood_data(training_data, neighbors)
+    interpolated_data,n_samples = interpolate_traffic_data(training_neighborhood_data, 5)
+    # print(training_neighborhood_dict)
+    # for i in list(training_neighborhood_data.keys()):
+    #     print(training_neighborhood_data[i].keys())
+    load_training_data(training_dates,interpolated_data,training_neighborhood_dict,neighbors,0,0,n_samples=n_samples,normalize_max=True)
+
     # print(testing_neighborhood_dict)
     
 
@@ -79,12 +85,12 @@ def load_neighborhood_data(traffic_data,neighbors):
     neighborhood_data = {}
     for date in traffic_data:
         neighborhood_data[date] = {}
-        try:
-            for sensor_id in neighbors:
+        for sensor_id in neighbors:
+            try:
                 neighborhood_data[date][str(sensor_id)] = traffic_data[date][str(sensor_id)]
-        except:
-            print('Sensor {} not found in traffic data. Available keys:{}'.format(sensor_id,traffic_data[date].keys()))
-            print("Key data type:{}, dict key data type:{}".format(type(sensor_id),type(list(traffic_data[date].keys())[0])))
+            except:
+                print('Sensor {} not found in traffic data. Available keys:{}'.format(sensor_id,traffic_data[date].keys()))
+                print("Key data type:{}, dict key data type:{}".format(type(sensor_id),type(list(traffic_data[date].keys())[0])))
     return neighborhood_data
 
 def interpolate_traffic_data(traffic_data,interval):
@@ -129,13 +135,48 @@ def load_timestamps(sensor_data,min_hour):
     return np.array(timestamps), np.array(names)
 
 
-def load_training_data(dates,neighborhood_data,neighborhood,neighbors,history,horizon,n_samples,use_time_of_day=True,normalize_max=False):
+def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,neighbors:list,history:int,horizon:int,n_samples:int,use_time_of_day:bool=True,normalize_max:bool=False):
+    """
+    :param list[str] dates: list of dates used to load training data
+    :param dict neighborhood_data: dictionary of traffic data, interpolated
+    :param dict neighborhood: neighborhood dictionary, at each hop from 1-K
+    :param list neighbors: list of all neighbors of the current sensor, within K hops
+    :param int history: how far in the past should the data be trained on
+    :param int horizon: how far ahead should the data be predicting
+    :param int n_samples: number of total data points,
+    :param bool use_time_of_day: use time of day as a feature for training
+    """
+    global sensor_dict
     #Training data format:
     # {date:{sensor_id:{'count':count,'timestamp':[hour,minute]}}}
     X = []
     y = []
-    for date in dates:
-        pass
+    #Arange in the form of (start,stop)
+    valid_sample_indices = np.arange(history,n_samples-horizon)
+    home_sensor = neighbors[0]
+    # print("Neighborhood_data:{}".format(neighborhood_data))
+    print("Neighborhood_data keys:{}".format(neighborhood_data.keys()))
+    print("Neighborhood:{}".format(neighborhood))
+    print("Neighbors:{}".format(neighbors))
+    max_dict = {}
+    if normalize_max:
+        for sensor in neighbors:
+            max_dict[sensor] = 0
+            for date in dates:
+                try:
+                    for sample in neighborhood_data[date][str(sensor)]:
+                        if neighborhood_data[date][str(sensor)][sample]['count']>max_dict[sensor]:
+                            max_dict[sensor] = neighborhood_data[date][str(sensor)][sample]['count']
+                except KeyError as e:
+                    print("--------------------")
+                    print("Date:{}".format(date))
+                    print("Neighborhood_data keys:{}".format(neighborhood_data[date].keys()))
+                    print("KeyError:{}".format(e))
+                    print("Corresponding camera name:{}".format(sensor_dict[str(sensor)][1]))
+                    print("Corresponding camera coordinates:{}".format(sensor_dict[str(sensor)][0]))
+    
+    print(max_dict)
+
 
 if __name__ == "__main__":
     main()
