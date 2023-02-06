@@ -33,8 +33,10 @@ def main():
     # print(training_neighborhood_dict)
     # for i in list(training_neighborhood_data.keys()):
     #     print(training_neighborhood_data[i].keys())
-    load_training_data(training_dates,interpolated_data,training_neighborhood_dict,neighbors,0,0,n_samples=n_samples,normalize_max=True)
-
+    temp=load_training_data(training_dates,interpolated_data,training_neighborhood_dict,neighbors,0,0,n_samples=n_samples,normalize_max=True)
+    print('Feature_vector:',temp[0].tolist())
+    # print("Ground_truth:",temp[1].tolist())
+    # print("Max_dict:",temp[2])
     # print(testing_neighborhood_dict)
     
 
@@ -141,13 +143,31 @@ def build_feature_vector(idx,n_samples, date, neighborhood_data,neighborhood,his
         features.append([idx])
     if isinstance(history,int):
         history = [history]
+    if isinstance(idx,int):
+        idx = str(idx)
+    # neighborhood = 
     for h in history:
         for k in neighborhood:
             for sensor in neighborhood[k]:
                 if len(max_dict)>0:
-                    features.append([neighborhood_data[date][str(sensor-h)][idx]['count']/max_dict[str(sensor)]])
+                    if max_dict[str(sensor)]==0:
+                        features.append([0])
+                    else:
+                        if str(sensor) not in neighborhood_data[date]:
+                            print('Sensor {} not found in neighborhood data. Available keys: {}'.format(str(sensor),neighborhood_data[date].keys()))
+                            features.append([0])
+                        elif idx-h not in neighborhood_data[date][str(sensor)]:
+                            print('Sensor {} not found in neighborhood data at time {}'.format(sensor,idx-h))
+                            features.append([0])
+                        else:
+                            features.append([neighborhood_data[date][str(sensor)][idx-h]['count']/max_dict[str(sensor)]])
                 else:
-                    features.append([neighborhood_data[date][str(sensor-h)][idx]['count']])
+                    if sensor not in neighborhood_data[date] or idx-h not in neighborhood_data[date][str(sensor)]:
+                        features.append([0])
+                    else:
+                        features.append([neighborhood_data[date][str(sensor)][idx-h]['count']])
+    ret_features = [f for sublist in features for f in sublist]
+    return np.array(ret_features)
 
 
 def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,neighbors:list,history:int,horizon:int,n_samples:int,use_time_of_day:bool=True,normalize_max:bool=False):
@@ -176,12 +196,12 @@ def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,
     max_dict = {}
     if normalize_max:
         for sensor in neighbors:
-            max_dict[sensor] = 0
+            max_dict[str(sensor)] = 0
             for date in dates:
                 try:
                     for sample in neighborhood_data[date][str(sensor)]:
-                        if neighborhood_data[date][str(sensor)][sample]['count']>max_dict[sensor]:
-                            max_dict[sensor] = neighborhood_data[date][str(sensor)][sample]['count']
+                        if neighborhood_data[date][str(sensor)][sample]['count']>max_dict[str(sensor)]:
+                            max_dict[str(sensor)] = neighborhood_data[date][str(sensor)][sample]['count']
                 except KeyError as e:
                     print("--------------------")
                     print("Date:{}".format(date))
@@ -192,10 +212,14 @@ def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,
     print(max_dict)
     for date in dates:
         for sample in valid_sample_indices:
-            X.append
-
-
-    
+            X.append(build_feature_vector(sample,n_samples,date,neighborhood_data,neighborhood,history,use_time_of_day,max_dict))
+            if len(max_dict)>0:
+                if str(home_sensor) not in max_dict:
+                    max_dict[str(home_sensor)] = 1
+                y.append(neighborhood_data[date][str(home_sensor)][sample+horizon]['count']/max_dict[str(home_sensor)])
+            else:
+                y.append(neighborhood_data[date][str(home_sensor)][sample+horizon]['count'])
+    return np.array(X), np.array(y), max_dict
 
 
 if __name__ == "__main__":
