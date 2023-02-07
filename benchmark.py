@@ -30,14 +30,30 @@ def main():
     training_neighborhood_dict,neighbors = load_K_hop_neighborhood(adj_matrix, 0, sensor_dict, 2)
     training_neighborhood_data = load_neighborhood_data(training_data, neighbors)
     interpolated_data,n_samples = interpolate_traffic_data(training_neighborhood_data, 5)
+
+    testing_neighborhood_dict,testing_neighbors = load_K_hop_neighborhood(adj_matrix, 0, sensor_dict, 2)
+    testing_neighborhood_data = load_neighborhood_data(testing_data, testing_neighbors)
+    testing_interpolated_data,testing_n_samples = interpolate_traffic_data(testing_neighborhood_data, 5)
+
     # print(training_neighborhood_dict)
     # for i in list(training_neighborhood_data.keys()):
     #     print(training_neighborhood_data[i].keys())
     temp=load_training_data(training_dates,interpolated_data,training_neighborhood_dict,neighbors,0,0,n_samples=n_samples,normalize_max=True)
-    print('Feature_vector:',temp[0].tolist())
+    # print('Feature_vector:',temp[0].tolist())
     # print("Ground_truth:",temp[1].tolist())
     # print("Max_dict:",temp[2])
     # print(testing_neighborhood_dict)
+    for test_date in testing_dates:
+        print(test_date)
+        test_temp = load_testing_data(test_date,testing_interpolated_data,testing_neighborhood_dict,testing_neighbors,3,3,n_samples=testing_n_samples,max_dict=temp[2])
+        print('Feature_vector:',test_temp[0].tolist())
+        print("Ground_truth:",test_temp[1].tolist())
+        print('Valid samples:',test_temp[2])
+        break
+    # test_temp = load_testing_data(testing_dates,testing_interpolated_data,testing_neighborhood_dict,testing_neighbors,0,0,n_samples=testing_n_samples,max_dict=temp[2])
+    # print('Feature_vector:',test_temp[0].tolist())
+    # print("Ground_truth:",test_temp[1].tolist())
+    # print("Max_dict:",test_temp[2])
     
 
     
@@ -190,9 +206,9 @@ def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,
     valid_sample_indices = np.arange(history,n_samples-horizon)
     home_sensor = neighbors[0]
     # print("Neighborhood_data:{}".format(neighborhood_data))
-    print("Neighborhood_data keys:{}".format(neighborhood_data.keys()))
-    print("Neighborhood:{}".format(neighborhood))
-    print("Neighbors:{}".format(neighbors))
+    # print("Neighborhood_data keys:{}".format(neighborhood_data.keys()))
+    # print("Neighborhood:{}".format(neighborhood))
+    # print("Neighbors:{}".format(neighbors))
     max_dict = {}
     if normalize_max:
         for sensor in neighbors:
@@ -209,7 +225,7 @@ def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,
                     print("KeyError:{}".format(e))
                     print("Corresponding camera name:{}".format(sensor_dict[str(sensor)][1]))
                     print("Corresponding camera coordinates:{}".format(sensor_dict[str(sensor)][0]))
-    print(max_dict)
+    # print(max_dict)
     for date in dates:
         for sample in valid_sample_indices:
             X.append(build_feature_vector(sample,n_samples,date,neighborhood_data,neighborhood,history,use_time_of_day,max_dict))
@@ -221,6 +237,39 @@ def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,
                 y.append(neighborhood_data[date][str(home_sensor)][sample+horizon]['count'])
     return np.array(X), np.array(y), max_dict
 
+def load_testing_data(date,neighborhood_data,neighborhood,neighbors,history,horizon,n_samples,max_dict,use_time_of_day=True):
+    """
+    :param list[str] dates: list of dates used to load training data
+    :param dict neighborhood_data: dictionary of traffic data, interpolated
+    :param dict neighborhood: neighborhood dictionary, at each hop from 1-K
+    :param list neighbors: list of all neighbors of the current sensor, within K hops
+    :param int history: how far in the past should the data be trained on
+    :param int horizon: how far ahead should the data be predicting
+    :param int n_samples: number of total data points,
+    :param bool use_time_of_day: use time of day as a feature for training
+    """
+    global sensor_dict
+    #Training data format:
+    # {date:{sensor_id:{'count':count,'timestamp':[hour,minute]}}}
+    X = []
+    y = []
+    #Arange in the form of (start,stop)
+    valid_sample_indices = np.arange(history,n_samples-horizon)
+    home_sensor = neighbors[0]
+    # print("Neighborhood_data:{}".format(neighborhood_data))
+    # print("Neighborhood_data keys:{}".format(neighborhood_data.keys()))
+    # print("Neighborhood:{}".format(neighborhood))
+    # print("Neighbors:{}".format(neighbors))
+    # print(max_dict)
+    for sample in valid_sample_indices:
+        X.append(build_feature_vector(sample,n_samples,date,neighborhood_data,neighborhood,history,use_time_of_day,max_dict))
+        if len(max_dict)>0:
+            if str(home_sensor) not in max_dict:
+                max_dict[str(home_sensor)] = 1
+            y.append(neighborhood_data[date][str(home_sensor)][sample+horizon]['count']/max_dict[str(home_sensor)])
+        else:
+            y.append(neighborhood_data[date][str(home_sensor)][sample+horizon]['count'])
+    return np.array(X), np.array(y), valid_sample_indices
 
 if __name__ == "__main__":
     main()
