@@ -2,6 +2,7 @@ import numpy as np
 import argparse
 import json
 import os
+from ha import HistoricalAverage
 
 sensor_dict = None
 
@@ -43,13 +44,19 @@ def main():
     # print("Ground_truth:",temp[1].tolist())
     # print("Max_dict:",temp[2])
     # print(testing_neighborhood_dict)
+
+    model = load_model(model_str=model_str,sensor=0,feature_dimension=temp[0].shape,history=3)
+    model.fit(interpolated_data, training_dates)
+
+
     for test_date in testing_dates:
         print(test_date)
         test_temp = load_testing_data(test_date,testing_interpolated_data,testing_neighborhood_dict,testing_neighbors,3,3,n_samples=testing_n_samples,max_dict=temp[2])
         print('Feature_vector:',test_temp[0].tolist())
         print("Ground_truth:",test_temp[1].tolist())
-        print('Valid samples:',test_temp[2])
+        print('Valid indices:',test_temp[2])
         break
+    print(model.predict(test_temp[-1]))
     # test_temp = load_testing_data(testing_dates,testing_interpolated_data,testing_neighborhood_dict,testing_neighbors,0,0,n_samples=testing_n_samples,max_dict=temp[2])
     # print('Feature_vector:',test_temp[0].tolist())
     # print("Ground_truth:",test_temp[1].tolist())
@@ -270,6 +277,11 @@ def load_testing_data(date,neighborhood_data,neighborhood,neighbors,history,hori
         else:
             y.append(neighborhood_data[date][str(home_sensor)][sample+horizon]['count'])
     return np.array(X), np.array(y), valid_sample_indices
+
+def load_model(model_str,sensor,feature_dimension,history):
+    if model_str == "ha":
+        model = HistoricalAverage(sensor_id=sensor)
+    return model
 
 if __name__ == "__main__":
     main()
