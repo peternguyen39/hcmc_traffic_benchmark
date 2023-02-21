@@ -1,7 +1,7 @@
 from sklearn.ensemble import RandomForestRegressor as RFR
 
 class RandomForestRegressor:
-    def __init__(self,n_estimators=50,criterion='mae') -> None:
+    def __init__(self,n_estimators=50,criterion='absolute_error') -> None:
         self.n_estimators = n_estimators
         self.criterion = criterion
 
