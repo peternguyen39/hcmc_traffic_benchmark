@@ -32,4 +32,4 @@ class HistoricalAverage:
                 predictions.append(self.ha_count[idx])
             else:
                 predictions.append(0)
-        return predictions
+        return np.array(predictions)

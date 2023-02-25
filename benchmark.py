@@ -53,8 +53,12 @@ def main():
 
                         model = load_model(model_str,sensor,X.shape[1], history)
                         for i in range(num_trials):
-                            model.fit(X, y)
-                            y_pred = model.predict(X_test)
+                            if model_str == 'ha':
+                                model.fit(interpolated_data,training_dates)
+                                y_pred = model.predict(indices)
+                            else:
+                                model.fit(X, y)
+                                y_pred = model.predict(X_test)
                             res = mae(y_test, y_pred)
                             result_dict[(sensor, test_date, K, history, horizon)].append(res)
                             print(result_dict)
