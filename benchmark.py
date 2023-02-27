@@ -7,23 +7,25 @@ from rfr import RandomForestRegressor
 from svr import SupportVectorRegressor
 from ann import TrafficANN
 from linear import LinearRegressor
+from tqdm import tqdm
+import sys
 
 sensor_dict = None
 
 def main():
     global sensor_dict
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model', required=True,
-                        type=str, help='string to identify model')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('-m', '--model', required=True,
+    #                     type=str, help='string to identify model')
+    # args = parser.parse_args()
 
-    model_str = args.model
+    # model_str = args.model
 
     sensors = [0]
 
-    if model_str not in ['ha', 'rfr', 'svr', 'ann', 'linear', 'linear-lasso', 'linear-ridge']:
-        raise ValueError(
-            'Select ha, rfr, svr, ann, linear, linear-lasso, or linear-ridge')
+    # if model_str not in ['ha', 'rfr', 'svr', 'ann', 'linear', 'linear-lasso', 'linear-ridge']:
+    #     raise ValueError(
+    #         'Select ha, rfr, svr, ann, linear, linear-lasso, or linear-ridge')
     
     graph_path = os.path.join(".",'graph', 'hcmc-clustered-graph.json')
     traffic_data_path = os.path.join('data', 'hcmc-traffic-data.json')
@@ -38,77 +40,55 @@ def main():
     num_trials = 10
     adj_matrix, dist_matrix, sensor_dict = load_traffic_graph(graph_path)
     result_dict = {}
-    for sensor in sensors:
-        for test_date in testing_dates:
-            for K in range(3):
-                neighborhood_dict, neighbors = load_K_hop_neighborhood(adj_matrix, sensor, sensor_dict, K)
-                traffic_data = load_traffic_data(traffic_data_path, dates=training_dates+testing_dates)
-                neighborhood_data = load_neighborhood_data(traffic_data, neighbors)
-                interpolated_data, n_samples = interpolate_traffic_data(neighborhood_data, interval)
-                for history in [3,6]:
-                    for horizon in [3,6,9]:
-                        result_dict[(sensor, test_date, K, history, horizon)] = []
-                        X, y, max_dict = load_training_data(training_dates, interpolated_data, neighborhood_dict, neighbors, history, horizon, n_samples=n_samples, normalize_max=True)
-                        X_test,y_test,indices = load_testing_data(test_date, interpolated_data, neighborhood_dict, neighbors, history, horizon, n_samples=n_samples, max_dict=max_dict)
-
-                        model = load_model(model_str,sensor,X.shape[1], history)
-                        for i in range(num_trials):
-                            if model_str == 'ha':
-                                model.fit(interpolated_data,training_dates)
-                                y_pred = model.predict(indices)
-                            else:
-                                model.fit(X, y)
-                                y_pred = model.predict(X_test)
-                            res = mae(y_test, y_pred)
-                            result_dict[(sensor, test_date, K, history, horizon)].append(res)
-                            print(result_dict)
-                            break
-                        break
-                    break
-                break
-            break
-        break
-
-
-
-
-    # training_data = load_traffic_data(traffic_data_path, dates=training_dates)
-    # testing_data = load_traffic_data(traffic_data_path, dates=testing_dates)
-
-    # training_neighborhood_dict,neighbors = load_K_hop_neighborhood(adj_matrix, 0, sensor_dict, 2)
-    # training_neighborhood_data = load_neighborhood_data(training_data, neighbors)
-    # interpolated_data,n_samples = interpolate_traffic_data(training_neighborhood_data, 5)
-
-    # testing_neighborhood_dict,testing_neighbors = load_K_hop_neighborhood(adj_matrix, 0, sensor_dict, 2)
-    # testing_neighborhood_data = load_neighborhood_data(testing_data, testing_neighbors)
-    # testing_interpolated_data,testing_n_samples = interpolate_traffic_data(testing_neighborhood_data, 5)
-
-    # # print(training_neighborhood_dict)
-    # # for i in list(training_neighborhood_data.keys()):
-    # #     print(training_neighborhood_data[i].keys())
-    # temp=load_training_data(training_dates,interpolated_data,training_neighborhood_dict,neighbors,0,0,n_samples=n_samples,normalize_max=True)
-    # # print('Feature_vector:',temp[0].tolist())
-    # # print("Ground_truth:",temp[1].tolist())
-    # # print("Max_dict:",temp[2])
-    # # print(testing_neighborhood_dict)
-
-    # model = load_model(model_str=model_str,sensor=0,feature_dimension=temp[0].shape,history=3)
-    # model.fit(temp[0], training_dates)
-
-
-    # for test_date in testing_dates:
-    #     print(test_date)
-    #     test_temp = load_testing_data(test_date,testing_interpolated_data,testing_neighborhood_dict,testing_neighbors,3,3,n_samples=testing_n_samples,max_dict=temp[2])
-    #     print('Feature_vector:',test_temp[0].tolist())
-    #     print("Ground_truth:",test_temp[1].tolist())
-    #     print('Valid indices:',test_temp[2])
-    #     break
-    # print(model.predict(test_temp[-1]))
-    # # test_temp = load_testing_data(testing_dates,testing_interpolated_data,testing_neighborhood_dict,testing_neighbors,0,0,n_samples=testing_n_samples,max_dict=temp[2])
-    # # print('Feature_vector:',test_temp[0].tolist())
-    # # print("Ground_truth:",test_temp[1].tolist())
-    # # print("Max_dict:",test_temp[2])
+    all_res ={}
     
+    for idx,model_type in enumerate(['ha', 'rfr', 'svr', 'ann', 'linear', 'linear-lasso', 'linear-ridge']):
+        print(f"Running {model_type}, {idx+1}/7")
+        model_str = model_type
+        with tqdm(total = len(sensors)*len(testing_dates)*3*2*3*num_trials,file=sys.stdout) as pbar:
+            for sensor in sensors:
+                for test_date in testing_dates:
+                    for K in range(3):
+                        neighborhood_dict, neighbors = load_K_hop_neighborhood(adj_matrix, sensor, sensor_dict, K)
+                        traffic_data = load_traffic_data(traffic_data_path, dates=training_dates+testing_dates)
+                        neighborhood_data = load_neighborhood_data(traffic_data, neighbors)
+                        interpolated_data, n_samples = interpolate_traffic_data(neighborhood_data, interval)
+                        for history in [3,6]:
+                            for horizon in [3,6,9]:
+                                result_dict[(sensor, test_date, K, history, horizon)] = []
+                                X, y, max_dict = load_training_data(training_dates, interpolated_data, neighborhood_dict, neighbors, history, horizon, n_samples=n_samples, normalize_max=True)
+                                X_test,y_test,indices = load_testing_data(test_date, interpolated_data, neighborhood_dict, neighbors, history, horizon, n_samples=n_samples, max_dict=max_dict)
+
+                                model = load_model(model_str,sensor,X.shape[1], history)
+                                for i in range(num_trials):
+                                    pbar.set_description(f"Sensor: {sensor}, Test Date: {test_date}, K: {K}, History: {history}, Horizon: {horizon}, Trial: {i}")
+                                    if model_str == 'ha':
+                                        model.fit(interpolated_data,training_dates)
+                                        y_pred = model.predict(indices)
+                                    else:
+                                        model.fit(X, y)
+                                        y_pred = model.predict(X_test)
+                                    res = mae(y_test, y_pred)
+                                    result_dict[(sensor, test_date, K, history, horizon)].append(res)
+                                    tqdm.write(f"Sensor: {sensor}, Test Date: {test_date}, K: {K}, History: {history}, Horizon: {horizon}, Trial: {i}, MAE: {res}")
+                                    pbar.update(1)
+                #                     break
+                #                 break
+                #             break
+                #         break
+                #     break
+                # break
+        print(result_dict)
+        all_res[model_str] = result_dict
+        # break
+    
+    temp_dict = {}
+    for i in all_res:
+        temp_dict[i] = {}
+        for j in all_res[i]:
+            temp_dict[i][str(j)] = all_res[i][j]
+    with open('all_results.json', 'w',encoding='utf8') as fp:
+        json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
     
 
     
@@ -162,8 +142,9 @@ def load_neighborhood_data(traffic_data,neighbors):
             try:
                 neighborhood_data[date][str(sensor_id)] = traffic_data[date][str(sensor_id)]
             except:
-                print('Sensor {} not found in traffic data. Available keys:{}'.format(sensor_id,traffic_data[date].keys()))
-                print("Key data type:{}, dict key data type:{}".format(type(sensor_id),type(list(traffic_data[date].keys())[0])))
+                # print('Sensor {} not found in traffic data. Available keys:{}'.format(sensor_id,traffic_data[date].keys()))
+                # print("Key data type:{}, dict key data type:{}".format(type(sensor_id),type(list(traffic_data[date].keys())[0])))
+                pass
     return neighborhood_data
 
 def interpolate_traffic_data(traffic_data,interval):
@@ -225,10 +206,10 @@ def build_feature_vector(idx,n_samples, date, neighborhood_data,neighborhood,his
                         features.append([0])
                     else:
                         if str(sensor) not in neighborhood_data[date]:
-                            print('Sensor {} not found in neighborhood data. Available keys: {}'.format(str(sensor),neighborhood_data[date].keys()))
+                            # print('Sensor {} not found in neighborhood data. Available keys: {}'.format(str(sensor),neighborhood_data[date].keys()))
                             features.append([0])
                         elif idx-h not in neighborhood_data[date][str(sensor)]:
-                            print('Sensor {} not found in neighborhood data at time {}'.format(sensor,idx-h))
+                            # print('Sensor {} not found in neighborhood data at time {}'.format(sensor,idx-h))
                             features.append([0])
                         else:
                             features.append([neighborhood_data[date][str(sensor)][idx-h]['count']/max_dict[str(sensor)]])
@@ -274,12 +255,13 @@ def load_training_data(dates:list[str],neighborhood_data:dict,neighborhood:dict,
                         if neighborhood_data[date][str(sensor)][sample]['count']>max_dict[str(sensor)]:
                             max_dict[str(sensor)] = neighborhood_data[date][str(sensor)][sample]['count']
                 except KeyError as e:
-                    print("--------------------")
-                    print("Date:{}".format(date))
-                    print("Neighborhood_data keys:{}".format(neighborhood_data[date].keys()))
-                    print("KeyError:{}".format(e))
-                    print("Corresponding camera name:{}".format(sensor_dict[str(sensor)][1]))
-                    print("Corresponding camera coordinates:{}".format(sensor_dict[str(sensor)][0]))
+                    # print("--------------------")
+                    # print("Date:{}".format(date))
+                    # print("Neighborhood_data keys:{}".format(neighborhood_data[date].keys()))
+                    # print("KeyError:{}".format(e))
+                    # print("Corresponding camera name:{}".format(sensor_dict[str(sensor)][1]))
+                    # print("Corresponding camera coordinates:{}".format(sensor_dict[str(sensor)][0]))
+                    pass
     # print(max_dict)
     for date in dates:
         for sample in valid_sample_indices:
