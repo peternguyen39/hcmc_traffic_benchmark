@@ -43,6 +43,7 @@ def main():
     all_res ={}
     
     for idx,model_type in enumerate(['ha', 'rfr', 'svr', 'ann', 'linear', 'linear-lasso', 'linear-ridge']):
+        result_dict = {}
         print(f"Running {model_type}, {idx+1}/7")
         model_str = model_type
         with tqdm(total = len(sensors)*len(testing_dates)*3*2*3*num_trials,file=sys.stdout) as pbar:
@@ -72,15 +73,10 @@ def main():
                                     result_dict[(sensor, test_date, K, history, horizon)].append(res)
                                     tqdm.write(f"Sensor: {sensor}, Test Date: {test_date}, K: {K}, History: {history}, Horizon: {horizon}, Trial: {i}, MAE: {res}")
                                     pbar.update(1)
-                #                     break
-                #                 break
-                #             break
-                #         break
-                #     break
-                # break
         print(result_dict)
-        all_res[model_str] = result_dict
-        # break
+        all_res[model_str] = result_dict.copy()
+
+    print("All results:",all_res)
     
     temp_dict = {}
     for i in all_res:
