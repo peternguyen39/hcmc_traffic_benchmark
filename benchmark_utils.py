@@ -209,6 +209,7 @@ def load_testing_data(date,neighborhood_data,neighborhood,neighbors,history,hori
     y = []
     #Arange in the form of (start,stop)
     valid_sample_indices = np.arange(history,n_samples-horizon)
+    # print("Length of valid test sample indices:{}".format(len(valid_sample_indices)))
     home_sensor = neighbors[0]
     # print("Neighborhood_data:{}".format(neighborhood_data))
     # print("Neighborhood_data keys:{}".format(neighborhood_data.keys()))
@@ -244,3 +245,9 @@ def load_model(model_str,sensor,feature_dimension,history):
 
 def mae(y_true,y_pred):
     return np.mean(np.abs(y_true-y_pred))
+
+def mse(y_true,y_pred):
+    return np.mean(np.square(y_true-y_pred))
+
+def rmse(y_true,y_pred):
+    return np.sqrt(mse(y_true,y_pred))

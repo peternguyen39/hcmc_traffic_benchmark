@@ -66,7 +66,7 @@ def main():
                                         y_pred = model.predict(X_test)
                                     res = mae(y_test, y_pred)
                                     result_dict[(sensor, test_date, K, history, horizon)].append(res)
-                                    raw_res[(sensor, test_date, K, history, horizon)] = [y_test,y_pred]
+                                    raw_res[(sensor, test_date, K, history, horizon)] = [y_test.tolist(),y_pred.tolist()]
                                     tqdm.write(f"Sensor: {sensor}, Test Date: {test_date}, K: {K}, History: {history}, Horizon: {horizon}, Trial: {i}, MAE: {res}")
                                     pbar.update(1)
         print(result_dict)
