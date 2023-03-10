@@ -94,6 +94,48 @@ def interpolate_traffic_data(traffic_data,interval):
         # break
     return interpolated_data, n_samples
 
+def interpolate_available_data(traffic_data,interval):
+    """
+    Apply interpolation for interval between earliest and latest timestamps
+    each day
+    """
+    interpolated_data = {}
+    for date in traffic_data:
+        date_data = traffic_data[date]
+        interpolated_data[date] = {}
+        # Iterate through each sensor
+        for sensor_id in date_data:
+            sensor_data = date_data[sensor_id]
+            interpolated_data[date][sensor_id] = {}
+            timestamps, file_names = load_timestamps_dynamic(sensor_data)
+            # print("Timestamps",timestamps)
+            # print("File names",file_names)
+            # Iterate through each sample file
+            for i in range(int(timestamps[0]),int(timestamps[-1]),interval):
+                interpolated_data[date][sensor_id][i] = {}
+                # Interpolate data using nearest neighboring timestamp
+                # Tried using linear interpolation (np.interp) but results in floating point values
+                # interpolated_data[date][sensor_id][i]['count'] = np.interp(i,timestamps,sensor_data[file_names]['count'])
+                # print('Interpolating data for sensor {} on date {} at time {}:{}...'.format(sensor_id,date,min_hour+((i*interval)//60),(i*interval)%60))
+                interpolated_data[date][sensor_id][i]['count'] = sensor_data[file_names[np.argmin(np.abs(timestamps-(i*interval)))]]['count']
+                interpolated_data[date][sensor_id][i]['timestamp'] = [i//60,i%60]
+                
+        #         break
+        #     break
+        # break
+        n_samples = int((timestamps[-1]-timestamps[0])/interval)
+    return interpolated_data, n_samples
+
+def load_timestamps_dynamic(sensor_data):
+    timestamps=[]
+    names = []
+    for name in sensor_data:
+        timestamp = sensor_data[name]['timestamp']
+        value = timestamp[0]*60+timestamp[1]
+        timestamps.append(value)
+        names.append(name)
+    return np.array(timestamps), np.array(names)
+
 
 def load_timestamps(sensor_data,min_hour):
     timestamps=[]

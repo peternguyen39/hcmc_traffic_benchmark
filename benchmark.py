@@ -29,7 +29,7 @@ def main():
     
     testing_dates=['2022-05-05', '2022-05-05_1', '2022-05-06', '2022-05-07', '2022-05-07_1', '2022-05-08', '2022-05-09']
     
-    interval = 5
+    interval = 2
     num_trials = 10
     adj_matrix, dist_matrix, sensor_dict = load_traffic_graph(graph_path)
     result_dict = {}
@@ -49,12 +49,13 @@ def main():
                         traffic_data = load_traffic_data(traffic_data_path, dates=training_dates+testing_dates)
                         neighborhood_data = load_neighborhood_data(traffic_data, neighbors)
                         interpolated_data, n_samples = interpolate_traffic_data(neighborhood_data, interval)
+                        # for i in interpolated_data:
+                        #     print(len(interpolated_data[i][str(0)]))
                         for history in [3,6]:
                             for horizon in [3,6,9]:
                                 result_dict[(sensor, test_date, K, history, horizon)] = []
                                 X, y, max_dict = load_training_data(training_dates, interpolated_data, neighborhood_dict, neighbors, history, horizon, n_samples=n_samples, normalize_max=False)
                                 X_test,y_test,indices = load_testing_data(test_date, interpolated_data, neighborhood_dict, neighbors, history, horizon, n_samples=n_samples, max_dict=max_dict)
-
                                 model = load_model(model_str,sensor,X.shape[1], history)
                                 for i in range(num_trials):
                                     pbar.set_description(f"Sensor: {sensor}, Test Date: {test_date}, K: {K}, History: {history}, Horizon: {horizon}, Trial: {i}")
@@ -80,7 +81,7 @@ def main():
         temp_dict[i] = {}
         for j in all_res[i]:
             temp_dict[i][str(j)] = all_res[i][j]
-    with open('all_results.json', 'w',encoding='utf8') as fp:
+    with open('all_results_i2.json', 'w',encoding='utf8') as fp:
         json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
 
     temp_dict = {}
@@ -88,7 +89,7 @@ def main():
         temp_dict[i] = {}
         for j in all_raw_res[i]:
             temp_dict[i][str(j)] = all_raw_res[i][j]
-    with open('all_raw_results.json', 'w',encoding='utf8') as fp:
+    with open('all_raw_results_i2.json', 'w',encoding='utf8') as fp:
         json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
     
 
