@@ -36,6 +36,7 @@ class TrafficANN(nn.Module):
                 print(f'Loss at step {n}: {loss.item()}')
 
     def predict(self,X):
-        X = torch.from_numpy(X).float()
-        y_pred = self.forward(X)
-        return y_pred.detach().numpy()
+        with torch.no_grad():
+            X = torch.from_numpy(X).float()
+            y_pred = self.forward(X)
+            return y_pred.squeeze(1).numpy()

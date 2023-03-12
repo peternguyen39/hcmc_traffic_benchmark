@@ -39,8 +39,9 @@ def main():
     all_raw_res={}
     for idx,model_type in enumerate(['ha', 'rfr', 'svr', 'ann', 'linear', 'linear-lasso', 'linear-ridge']):
         result_dict = {}
+        model_str = 'ann'
         print(f"Running {model_type}, {idx+1}/7")
-        model_str = model_type
+        # model_str = model_type
         with tqdm(total = len(sensors)*len(testing_dates)*3*2*3*num_trials,file=sys.stdout) as pbar:
             for sensor in sensors:
                 for test_date in testing_dates:
@@ -54,6 +55,7 @@ def main():
                         for history in [3,6]:
                             for horizon in [3,6,9]:
                                 result_dict[(sensor, test_date, K, history, horizon)] = []
+                                raw_res[(sensor, test_date, K, history, horizon)] = []
                                 X, y, max_dict = load_training_data(training_dates, interpolated_data, neighborhood_dict, neighbors, history, horizon, n_samples=n_samples, normalize_max=False)
                                 X_test,y_test,indices = load_testing_data(test_date, interpolated_data, neighborhood_dict, neighbors, history, horizon, n_samples=n_samples, max_dict=max_dict)
                                 model = load_model(model_str,sensor,X.shape[1], history)
@@ -67,12 +69,23 @@ def main():
                                         y_pred = model.predict(X_test)
                                     res = mae(y_test, y_pred)
                                     result_dict[(sensor, test_date, K, history, horizon)].append(res)
-                                    raw_res[(sensor, test_date, K, history, horizon)] = [y_test.tolist(),y_pred.tolist()]
+                                    raw_res[(sensor, test_date, K, history, horizon)].append([y_test.tolist(),y_pred.tolist()])
                                     tqdm.write(f"Sensor: {sensor}, Test Date: {test_date}, K: {K}, History: {history}, Horizon: {horizon}, Trial: {i}, MAE: {res}")
                                     pbar.update(1)
-        print(result_dict)
-        all_res[model_str] = result_dict.copy()
-        all_raw_res[model_str] = raw_res.copy()
+                                    # print(y_pred)
+                                    print(X_test)
+                                    break
+                                break
+                            break
+                        break
+                    break
+                break
+        # # print(result_dict)
+        # all_res[model_str] = result_dict.copy()
+        # all_raw_res[model_str] = raw_res.copy()
+        # print("All results:",all_raw_res)
+        break
+        
 
     print("All results:",all_res)
     
@@ -81,7 +94,7 @@ def main():
         temp_dict[i] = {}
         for j in all_res[i]:
             temp_dict[i][str(j)] = all_res[i][j]
-    with open('all_results_i2.json', 'w',encoding='utf8') as fp:
+    with open('all_results_i2_ann_new.json', 'w',encoding='utf8') as fp:
         json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
 
     temp_dict = {}
@@ -89,7 +102,7 @@ def main():
         temp_dict[i] = {}
         for j in all_raw_res[i]:
             temp_dict[i][str(j)] = all_raw_res[i][j]
-    with open('all_raw_results_i2.json', 'w',encoding='utf8') as fp:
+    with open('all_raw_results_i2_ann_new.json', 'w',encoding='utf8') as fp:
         json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
     
 
