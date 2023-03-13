@@ -176,9 +176,11 @@ def build_feature_vector(idx,n_samples, date, neighborhood_data,neighborhood,his
                 else:
                     if str(sensor) not in neighborhood_data[date] or idx-h not in neighborhood_data[date][str(sensor)]:
                         if str(sensor) not in neighborhood_data[date]:
-                            print('Sensor {} not found in neighborhood data. Available keys: {}'.format(sensor,neighborhood_data[date].keys()))
-                        if idx-h not in neighborhood_data[date][str(sensor)]:
-                            print('Sensor {} not found in neighborhood data at time {}'.format(sensor,idx-h))
+                            # print('Sensor {} not found in neighborhood data. Available keys: {}'.format(sensor,neighborhood_data[date].keys()))
+                            pass
+                        elif idx-h not in neighborhood_data[date][str(sensor)]:
+                            # print('Sensor {} not found in neighborhood data at time {}'.format(sensor,idx-h))
+                            pass
                         features.append([0])
                     else:
                         features.append([neighborhood_data[date][str(sensor)][idx-h]['count']])
