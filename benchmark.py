@@ -14,7 +14,7 @@ def main():
 
     # model_str = args.model
 
-    sensors = [0]
+    sensors = [97]
 
     # if model_str not in ['ha', 'rfr', 'svr', 'ann', 'linear', 'linear-lasso', 'linear-ridge']:
     #     raise ValueError(
@@ -29,7 +29,7 @@ def main():
     
     testing_dates=['2022-05-05', '2022-05-05_1', '2022-05-06', '2022-05-07', '2022-05-07_1', '2022-05-08', '2022-05-09']
     
-    interval = 2
+    interval = 5
     num_trials = 10
     adj_matrix, dist_matrix, sensor_dict = load_traffic_graph(graph_path)
     result_dict = {}
@@ -85,7 +85,7 @@ def main():
         temp_dict[i] = {}
         for j in all_res[i]:
             temp_dict[i][str(j)] = all_res[i][j]
-    with open('all_results_i2_fixed.json', 'w',encoding='utf8') as fp:
+    with open('all_results_s97_i5_fixed.json', 'w',encoding='utf8') as fp:
         json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
 
     temp_dict = {}
@@ -93,7 +93,7 @@ def main():
         temp_dict[i] = {}
         for j in all_raw_res[i]:
             temp_dict[i][str(j)] = all_raw_res[i][j]
-    with open('all_raw_results_i2_fixed.json', 'w',encoding='utf8') as fp:
+    with open('all_raw_results_s97_i5_fixed.json', 'w',encoding='utf8') as fp:
         json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
     
 
