@@ -22,14 +22,16 @@ def main():
     
     graph_path = os.path.join(".",'graph', 'hcmc-clustered-graph.json')
     traffic_data_path = os.path.join('data', 'hcmc-traffic-data.json')
-    training_dates = ['2022-04-05', '2022-04-06', '2022-04-07', '2022-04-08', '2022-04-09', '2022-04-10', '2022-04-11',
-     '2022-04-12', '2022-04-13', '2022-04-14', '2022-04-15', '2022-04-16', '2022-04-17', '2022-04-18', '2022-04-19', '2022-04-20',
-      '2022-04-21', '2022-04-22','2022-04-23', '2022-04-24', '2022-04-25', '2022-04-26', '2022-04-27', '2022-04-28', '2022-04-29',
-       '2022-04-30', '2022-05-01', '2022-05-02', '2022-05-03', '2022-05-04'] 
+    # training_dates = ['2022-04-05', '2022-04-06', '2022-04-07', '2022-04-08', '2022-04-09', '2022-04-10', '2022-04-11',
+    #  '2022-04-12', '2022-04-13', '2022-04-14', '2022-04-15', '2022-04-16', '2022-04-17', '2022-04-18', '2022-04-19', '2022-04-20',
+    #   '2022-04-21', '2022-04-22','2022-04-23', '2022-04-24', '2022-04-25', '2022-04-26', '2022-04-27', '2022-04-28', '2022-04-29',
+    #    '2022-04-30', '2022-05-01', '2022-05-02', '2022-05-03', '2022-05-04'] 
     
-    testing_dates=['2022-05-05', '2022-05-05_1', '2022-05-06', '2022-05-07', '2022-05-07_1', '2022-05-08', '2022-05-09']
+    # testing_dates=['2022-05-05', '2022-05-05_1', '2022-05-06', '2022-05-07', '2022-05-07_1', '2022-05-08', '2022-05-09']
+    training_dates = ['2022-04-05', '2022-04-06', '2022-04-07', '2022-04-08', '2022-04-09', '2022-04-10', '2022-04-11']
+    testing_dates = ['2022-04-30','2022-05-01']
     
-    interval = 5
+    interval = 2
     num_trials = 10
     adj_matrix, dist_matrix, sensor_dict = load_traffic_graph(graph_path)
     result_dict = {}
@@ -72,10 +74,17 @@ def main():
                                     raw_res[(sensor, test_date, K, history, horizon)].append([y_test.tolist(),y_pred.tolist()])
                                     tqdm.write(f"Sensor: {sensor}, Test Date: {test_date}, K: {K}, History: {history}, Horizon: {horizon}, Trial: {i}, MAE: {res}")
                                     pbar.update(1)
+                                    break
+                                break
+                            break
+                        break
+                break
+
         # print(result_dict)
         all_res[model_str] = result_dict.copy()
         all_raw_res[model_str] = raw_res.copy()
         print("All results for current model:",all_res[model_str])
+        break
         
 
     print("All results:",all_res)
@@ -85,7 +94,7 @@ def main():
         temp_dict[i] = {}
         for j in all_res[i]:
             temp_dict[i][str(j)] = all_res[i][j]
-    with open('all_results_s97_i5_fixed.json', 'w',encoding='utf8') as fp:
+    with open(f'all_results_s97_i{interval}_holidays.json', 'w',encoding='utf8') as fp:
         json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
 
     temp_dict = {}
@@ -93,7 +102,7 @@ def main():
         temp_dict[i] = {}
         for j in all_raw_res[i]:
             temp_dict[i][str(j)] = all_raw_res[i][j]
-    with open('all_raw_results_s97_i5_fixed.json', 'w',encoding='utf8') as fp:
+    with open(f'all_raw_results_s97_i{interval}_holidays.json', 'w',encoding='utf8') as fp:
         json.dump(temp_dict, fp,indent=4,ensure_ascii=False)
     
 
